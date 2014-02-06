@@ -4,23 +4,39 @@ require 'epitools'
 require 'rb-inotify'
 require_relative "file_index"
 
-index    = FileIndex.new(log: true)
 notifier = INotify::Notifier.new
+$index   = FileIndex.new(log: true)
+$queue   = Set.new
 
-# :close_write, :modify, :attrib, :move
+def process_queue
+  # puts "<8>* <11>Processing queue".colorize
+  $queue.each do |path|
+    puts "<8>* <14>Indexing: <3>#{path}".colorize
+    $index.add Path[path]
+  end
+  # puts "<8>  |_ <14>Done!".colorize
+
+  $queue.clear
+end
+
+# :close_write, :modify, :attrib, :move, :delete
 notifier.watch(ARGV.first, :close_write, :attrib, :move) do |event|
   puts "<14>#{event.absolute_name}".colorize
-  index.add Path[event.absolute_name]
+  $queue << event.absolute_name
+end
+
+
+loop do
+  # only process new files if nothing has happened for 5 seconds
+  if IO.select([notifier.to_io], [], [], 5) 
+    puts "notified"
+    notifier.process
+  end
+
+  process_queue
 end
 
 # notifier.run
-
-# Wait 10 seconds for an event then give up
-loop do
-  if IO.select([notifier.to_io], [], [], 10)
-    notifier.process
-  end
-end
 
 # ## Flags
 
