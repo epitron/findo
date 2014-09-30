@@ -1,0 +1,30 @@
+#!/usr/bin/env ruby
+require 'epitools'
+require 'slop'
+require_relative 'file_index'
+
+index = FileIndex.new(log: true)
+
+def parse_options
+  Slop.parse(help: true, strict: true) do
+    banner 'Usage: reindex [options] <path...>'
+
+    on 'r', 'reset', 'Reset index'
+  end
+end
+
+opts = parse_options
+
+if opts.reset?
+  puts "* Resetting index..."
+  index.reset! 
+end
+
+args = ARGV
+
+args.each do |arg|
+  Path[arg].ls_r.each do |path|
+    puts "<14>#{path}".colorize
+    index.add path
+  end
+end

@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+require 'epitools'
+require 'slop'
+require_relative "file_index"
+
+# Nested queries:
+#   http://www.spacevatican.org/2012/6/3/fun-with-elasticsearch-s-children-and-nested-documents/
+
+def parse_options
+  Slop.parse(help: true, strict: true) do
+    banner 'Usage: search [options] <query...>'
+
+    on 'v', 'verbose', 'Show all mplayer output spam'
+  end
+end
+
+
+query = ARGV.join " "
+query = "*" if query.empty?
+
+
+results         = FileIndex.new.search(query)
+grouped_by_dir = results.group_by{|r| r.data["dir"] }.sort
+
+grouped_by_dir.each do |dir, rs|
+  
+  puts "#{dir.light_blue}/" unless dir == '.'
+  rs.each do |r|
+    puts "  #{ [r.data["name"], r.data["ext"]].compact.join(".") }"
+  end
+  
+  puts
+  
+end
